@@ -101,9 +101,15 @@ function minBefore(n: number): number {
 await runBars({
   onBatch(state, batch) {
     // Settle the previous batch's fills first: a filled buy names its leg,
-    // a filled sell clears it. A rejected buy counts for nothing.
+    // a filled sell clears it. A rejected fill counts for nothing — except
+    // that a rejected buy must clear the leg it was meant to take, or a
+    // later fill could inherit a stale leg.
     for (const fill of batch.fills) {
-      if (fill.symbol !== SYMBOL || fill.status !== 'filled') continue;
+      if (fill.symbol !== SYMBOL) continue;
+      if (fill.status !== 'filled') {
+        pendingLeg = null;
+        continue;
+      }
       if (fill.side === 'buy') {
         leg = pendingLeg;
         if (leg === 'B') bTrades++;
